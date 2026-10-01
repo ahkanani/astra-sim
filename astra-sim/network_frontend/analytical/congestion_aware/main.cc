@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     // Create ASTRA-sim related resources
     auto network_apis =
         std::vector<std::unique_ptr<CongestionAwareNetworkApi>>();
-    
+
     json mem_json;
     std::ifstream rm_ifs(memory_configuration);
     rm_ifs >> mem_json;
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
       mem_json.contains("memory-type") &&
       mem_json.contains("mem-latency") &&
       mem_json.contains("mem-bw");
-    
+
     if (is_single) {
       std::cout << "Single Memory Configuration Detected" << std::endl;
       memory_levels.push_back(std::make_unique<AnalyticalMemory>(memory_configuration));
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
         j["memory-location"] = "LOCAL_MEMORY";
         auto path = save_json_to_tmp(j, "local_mem");
         memory_levels.push_back(std::make_unique<AnalyticalMemory>(path));
-        std::remove(path.c_str()); 
+        std::remove(path.c_str());
       }
 
       // remote memory
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
         j["memory-location"] = "REMOTE_MEMORY";
         auto path = save_json_to_tmp(j, "remote_mem");
         memory_levels.push_back(std::make_unique<AnalyticalMemory>(path));
-        std::remove(path.c_str()); 
+        std::remove(path.c_str());
       }
 
       // cxl memory
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
         j["memory-location"] = "CXL_MEMORY";
         auto path = save_json_to_tmp(j, "cxl_mem");
         memory_levels.push_back(std::make_unique<AnalyticalMemory>(path));
-        std::remove(path.c_str()); 
+        std::remove(path.c_str());
       }
 
       ::rmdir("tmp_mem");
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
     for (auto& mem_api : memory_levels) {
       memory_apis.push_back(mem_api.get());
     }
-    
+
     auto systems = std::vector<Sys*>();
 
     auto queues_per_dim = std::vector<int>();
@@ -225,7 +225,7 @@ int main(int argc, char* argv[]) {
       else {
         event_queue->add_current_time();
       }
-      
+
       for (std::size_t idx = 0; idx < end_npu_ids.size(); ++idx) {
         int npu_id = end_npu_ids[idx];
         cout << "Checking End NPU " << npu_id << " ..." << endl;
@@ -237,27 +237,27 @@ int main(int argc, char* argv[]) {
           std::string new_filename;
           std::getline(std::cin, new_filename);
 
-          if (new_filename == "pass") {  
+          if (new_filename == "pass") {
             // Skip to the next npu
             continue;
-          } 
-          else if (new_filename == "exit") {  
+          }
+          else if (new_filename == "exit") {
             // Terminate the entire simulator
             exit = true;
             break;
-          } 
+          }
           else if (new_filename == "done") {
             // This instance is done. Go to sleep until exit
             systems[npu_id]->workload->is_sleep = true;
           }
-          else {  
+          else {
             // Add new workload to this system
             systems[npu_id]->workload
                 ->add_workload(new_filename, {});
           }
         }
       }
-      
+
       if (exit) {
         break;
       }
@@ -273,20 +273,20 @@ int main(int argc, char* argv[]) {
           std::string new_filename;
           std::getline(std::cin, new_filename);
 
-          if (new_filename == "pass") {  
+          if (new_filename == "pass") {
             // Skip to the next npu
             continue;
-          } 
-          else if (new_filename == "exit") {  
+          }
+          else if (new_filename == "exit") {
             // Terminate the entire simulator
             exit = true;
             break;
-          } 
+          }
           else if (new_filename == "done") {
             // This instance is done. Go to sleep until exit
             systems[npu_id]->workload->is_sleep = true;
           }
-          else {  
+          else {
             // Add new workload to the systems handled by this npu
             systems[npu_id]->workload
                 ->add_workload(new_filename, managed_systems[idx]);

@@ -1,11 +1,11 @@
 {
-    "local_mem": 
+    "local_mem":
         {
             "memory-type": "PER_NPU_MEMORY_EXPANSION",
             "mem-latency": 30,
             "mem-bw": 1024
         },
-    "remote_mem": 
+    "remote_mem":
         {
             "memory-type": "PER_NODE_MEMORY_EXPANSION",
             "mem-latency": 120,
@@ -13,7 +13,7 @@
             "num-nodes": 8,
             "num-npus-per-node": 8
         },
-    "cxl_mem": 
+    "cxl_mem":
         {
             "memory-type": "MEMORY_POOL",
             "mem-latency": 250,

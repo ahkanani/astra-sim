@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e 
+set -e
 
 SCRIPT_DIR=$(dirname "$(realpath $0)")
 PROJ_DIR=${SCRIPT_DIR}/../..
@@ -9,8 +9,8 @@ PROJ_DIR=${SCRIPT_DIR}/../..
 apt -y update
 apt -y upgrade
 apt -y install coreutils wget vim git
-apt -y install gcc-11 g++-11 make cmake 
-apt -y install clang-format 
+apt -y install gcc-11 g++-11 make cmake
+apt -y install clang-format
 apt -y install libboost-dev libboost-program-options-dev
 apt -y install python3.10 python3-pip
 apt -y install libprotobuf-dev protobuf-compiler

@@ -95,8 +95,8 @@ map<pair<int, pair<int, int>>, int> sender_src_port_map;
 map<pair<int, int>, int> node_to_bytes_sent_map;
 
 // SentHash stores a MsgEvent for sim_send events and its callback handler.
-//   - key: A pair of <MsgEventKey, port_id>. 
-//          A single collective phase can be split into multiple sim_send messages, which all have the same MsgEventKey. 
+//   - key: A pair of <MsgEventKey, port_id>.
+//          A single collective phase can be split into multiple sim_send messages, which all have the same MsgEventKey.
 //          TODO: Adding port_id as key is a hacky solution. The real solution would be to split this map, similar to sim_recv_waiting_hash and received_msg_standby_hash.
 //   - value: A MsgEvent instance that indicates that Sys layer is waiting for a
 //   send event to finish

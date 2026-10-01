@@ -23,7 +23,6 @@ jobs:
 
     - name: Install Python Packages
       run: pip3 install protobuf==3.6.1 pydot
-        
+
     - name: Build
       run: bash ${{github.workspace}}/build/astra_analytical/build.sh
-

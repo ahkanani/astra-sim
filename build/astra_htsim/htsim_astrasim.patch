@@ -3,9 +3,9 @@ index 45b54d3..664561b 100755
 --- a/sim/tcp.cpp
 +++ b/sim/tcp.cpp
 @@ -185,6 +185,15 @@ TcpSrc::receivePacket(Packet& pkt)
- 
+
      if (seqno >= _flow_size){
-         cout << "Flow " << nodename() << " finished at " << timeAsMs(eventlist().now()) << endl;        
+         cout << "Flow " << nodename() << " finished at " << timeAsMs(eventlist().now()) << endl;
 +        // AstraSim entry point
 +        // Use IDs memorized at point of adding the flow, as well as unique src tag for the transition
 +        if (astrasim_flow_finish_send_cb) {
@@ -16,7 +16,7 @@ index 45b54d3..664561b 100755
 +            astrasim_flow_finish_send_cb(src_id, dst_id, _flow_size, tag);
 +        }
      }
-   
+
      if (seqno > _last_acked) { // a brand new ack
 @@ -681,6 +690,17 @@ TcpSink::receivePacket(Packet& pkt) {
              }
@@ -35,20 +35,20 @@ index 45b54d3..664561b 100755
 +
      send_ack(ts,marked);
  }
- 
+
 diff --git a/sim/tcp.h b/sim/tcp.h
 index 127bbdb..3c97422 100755
 --- a/sim/tcp.h
 +++ b/sim/tcp.h
 @@ -44,10 +44,9 @@ public:
- 
+
      void set_flowsize(uint64_t flow_size_in_bytes) {
          _flow_size = flow_size_in_bytes+_mss;
 -        cout << "Setting flow size to " << _flow_size << endl;
 +        // cout << "Setting flow size to " << _flow_size << endl;
      }
      flowid_t getFlowId() {return _flow.flow_id();}
--    
+-
      void set_ssthresh(uint64_t s){_ssthresh = s;}
      void set_cwnd(uint64_t s){_cwnd = s;}
      void set_dst(int d){_dst=d;}
@@ -63,11 +63,11 @@ index 127bbdb..3c97422 100755
 +        int _debug_srcid = -1;
 +        int _debug_dstid = -1;
  };
- 
+
  class TcpSink : public PacketSink, public DataReceiver {
 @@ -180,6 +185,12 @@ private:
      void send_ack(simtime_picosec ts,bool marked);
- 
+
      string _nodename;
 +    public:
 +    // for AstraSim
@@ -76,5 +76,5 @@ index 127bbdb..3c97422 100755
 +    int _debug_srcid = -1;
 +    int _debug_dstid = -1;
  };
- 
+
  class TcpRtxTimerScanner : public EventSource {
