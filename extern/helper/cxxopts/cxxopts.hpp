@@ -1528,7 +1528,7 @@ namespace cxxopts
     ParseResult() = default;
     ParseResult(const ParseResult&) = default;
 
-    ParseResult(NameHashMap&& keys, ParsedHashMap&& values, std::vector<KeyValue> sequential,
+    ParseResult(NameHashMap&& keys, ParsedHashMap&& values, std::vector<KeyValue> sequential, 
             std::vector<KeyValue> default_opts, std::vector<std::string>&& unmatched_args)
     : m_keys(std::move(keys))
     , m_values(std::move(values))

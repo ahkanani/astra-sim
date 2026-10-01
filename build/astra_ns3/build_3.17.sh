@@ -28,8 +28,8 @@ function compile {
     cp "${ASTRA_SIM_DIR}"/network_frontend/ns3/AstraSimNetwork.cc "${NS3_DIR}"/simulation/scratch/
     cp "${ASTRA_SIM_DIR}"/network_frontend/ns3/*.h "${NS3_DIR}"/simulation/scratch/
     cd "${NS3_DIR}/simulation"
-    CC='gcc-5' CXX='g++-5' ./waf configure
-    CC='gcc-5' CXX='g++-5' ./waf build
+    CC='gcc-5' CXX='g++-5' ./waf configure 
+    CC='gcc-5' CXX='g++-5' ./waf build 
     cd "${SCRIPT_DIR:?}"
 }
 

@@ -499,7 +499,7 @@ class base : public std::enable_shared_from_this<base> {
  */
 template <class T> class value : public base {
     struct make_shared_enabler {
-        // nothing; this tag is accessible only to friends
+        // nothing; this is a private key accessible only to friends
     };
 
     template <class U>

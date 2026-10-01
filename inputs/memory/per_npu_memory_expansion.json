@@ -1,5 +1,5 @@
 {
-    "remote_mem":
+    "remote_mem": 
         {
               "memory-type": "PER_NPU_MEMORY_EXPANSION",
               "remote-mem-latency": 0,

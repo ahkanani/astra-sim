@@ -187,7 +187,7 @@ Sys::Sys(int id,
             sys_panic("Unsupported memory location type");
         }
     }
-
+    
     this->local_mem_bw = 0;
 
     this->memBus = nullptr;

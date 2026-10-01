@@ -51,14 +51,14 @@ static std::string save_json_to_tmp(const json& j, const std::string& name) {
  * @brief Tracks the completion status of ranks in the NS3 backend.
  *
  * This is a hacky approach to track which ranks have completed their workload.
- * The purpose of this class is to end the ns3 simulation once all ranks have completed.
+ * The purpose of this class is to end the ns3 simulation once all ranks have completed. 
  * The hacky approach is necessary because each ASTRASimNetwork instance only corresponds to one rank.
  * That is, someone needs to keep track of the completion status of all of the ranks.
- * Because there is no exit point once the ns3 simulator has started,
+ * Because there is no exit point once the ns3 simulator has started, 
  * we cannot implement such tracker in the main function.
  */
 class NS3BackendCompletionTracker {
-    public:
+    public: 
         NS3BackendCompletionTracker(int num_ranks) {
             num_unfinished_ranks_ = num_ranks;
             completion_tracker_ = vector<int>(num_ranks, 0);
@@ -293,7 +293,7 @@ void parse_args(int argc, char* argv[]) {
                  "Logical topology configuration file",
                  logical_topology_configuration);
     cmd.AddValue("logging-configuration",
-                 "Logging configuration file",
+                 "Logging configuration file", 
                  logging_configuration);
 
     cmd.AddValue("num-queues-per-dim", "Number of queues per each dimension",
@@ -332,7 +332,7 @@ int main(int argc, char* argv[]) {
       mem_json.contains("memory-type") &&
       mem_json.contains("mem-latency") &&
       mem_json.contains("mem-bw");
-
+    
     if (is_single) {
       std::cout << "Single Memory Configuration Detected" << std::endl;
       memory_levels.push_back(std::make_unique<AnalyticalMemory>(memory_configuration));
@@ -343,7 +343,7 @@ int main(int argc, char* argv[]) {
         j["memory-location"] = "LOCAL_MEMORY";
         auto path = save_json_to_tmp(j, "local_mem");
         memory_levels.push_back(std::make_unique<AnalyticalMemory>(path));
-        std::remove(path.c_str());
+        std::remove(path.c_str()); 
       }
 
       // remote memory
@@ -352,7 +352,7 @@ int main(int argc, char* argv[]) {
         j["memory-location"] = "REMOTE_MEMORY";
         auto path = save_json_to_tmp(j, "remote_mem");
         memory_levels.push_back(std::make_unique<AnalyticalMemory>(path));
-        std::remove(path.c_str());
+        std::remove(path.c_str()); 
       }
 
       // cxl memory
@@ -361,7 +361,7 @@ int main(int argc, char* argv[]) {
         j["memory-location"] = "CXL_MEMORY";
         auto path = save_json_to_tmp(j, "cxl_mem");
         memory_levels.push_back(std::make_unique<AnalyticalMemory>(path));
-        std::remove(path.c_str());
+        std::remove(path.c_str()); 
       }
 
       ::rmdir("tmp_mem");

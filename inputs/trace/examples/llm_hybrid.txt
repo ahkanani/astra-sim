@@ -1,6 +1,6 @@
-HYBRID_TENSOR_PIPELINE  model_parallel_NPU_group: 4
-19
-Layername       comp_time       input_loc   input_size  weight_loc  weight_size output_loc  output_size comm_type       comm_size   misc
+HYBRID_TENSOR_PIPELINE  model_parallel_NPU_group: 4								
+19		
+Layername       comp_time       input_loc   input_size  weight_loc  weight_size output_loc  output_size comm_type       comm_size   misc						
 Word_Embed	300             REMOTE      0           REMOTE      0           REMOTE      0           ALLGATHER       8388608     NONE
 Pos_Embed	300             REMOTE      0           REMOTE      0           REMOTE      0           NONE            0           NONE
 Layernorm1_1    300             REMOTE      0           REMOTE      0           REMOTE      0           NONE            0           NONE

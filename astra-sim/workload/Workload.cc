@@ -22,7 +22,7 @@ using namespace std;
 using namespace AstraSim;
 using namespace Chakra;
 using json = nlohmann::json;
-using AstraSim::MemoryLocationType;
+using AstraSim::MemoryLocationType; 
 
 typedef ChakraProtoMsg::NodeType ChakraNodeType;
 typedef ChakraProtoMsg::CollectiveCommType ChakraCollectiveCommType;
@@ -190,7 +190,7 @@ void Workload::issue_replay(shared_ptr<Chakra::ETFeederNode> node) {
     sys->register_event(this, EventType::General, wlhd, runtime);
 }
 
-/*
+/* 
     Now the node only stores one tensor_size for MEM_LOAD/STORE
     Can get tensor size using
     - node->tensor_size()
@@ -199,9 +199,9 @@ void Workload::issue_replay(shared_ptr<Chakra::ETFeederNode> node) {
     - node->name().find("INPUT") != string::npos
     - node->name().find("OUTPUT") != string::npos
     - node->name().find("WEIGHT") != string::npos
-
+    
     For the tensor location use tensor_loc()
-    - node->tensor_loc()
+    - node->tensor_loc() 
     INVALID_MEMORY = 0, LOCAL_MEMORY = 1, REMOTE_MEMORY = 2, CXL_MEMORY = 3 STORAGE_MEMORY = 4
 */
 void Workload::issue_mem(shared_ptr<Chakra::ETFeederNode> node) {
@@ -294,10 +294,10 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
     } else {
         // involved_dim does not exist in ETFeeder.
         // Assume involved_dim = [1,1,1,1,1] which we could simulate 5-Dimension.
-	// Could use Process Group to build involved_dim later.
+	// Could use Process Group to build involved_dim later. 
 	// Once process group is implemented, you should get
         // that with node->pg_name()
-
+	
 	for(int i = 0; i < 4; i++)
             involved_dim.push_back(true);
     }
@@ -418,7 +418,7 @@ void Workload::call(EventType event, CallData* data) {
         et_feeder->freeChildrenNodes(node_id);
 
         issue_dep_free_nodes();
-
+      
         // The Dataset class provides statistics that should be used later to dump
         // more statistics in the workload layer
         delete collective_comm_wrapper_map[int_data->data];
@@ -517,7 +517,7 @@ void Workload::add_workload(const std::string& new_filename,
     }
     string workload_filename = new_filename + "." + to_string(sys->id) + ".et";
     // cout << workload_filename << endl;
-
+  
     // Check if workload filename exists
     if (access(workload_filename.c_str(), R_OK) < 0) {
         string error_msg;
@@ -531,7 +531,7 @@ void Workload::add_workload(const std::string& new_filename,
         LoggerFactory::get_logger("workload")->critical(error_msg);
         return;
     }
-
+  
     // there exists new workload, change the ETFeeder
     if (this->et_feeder != nullptr)
       delete this->et_feeder;

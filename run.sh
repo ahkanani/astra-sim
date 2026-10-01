@@ -19,5 +19,5 @@ MEMORY="${SCRIPT_DIR:?}"/inputs/memory/memory_expansion.json
   --network-configuration="${NETWORK}" \
   --memory-configuration="${MEMORY}" \
   --start-npu-ids="0" \
-  # --end-npu-ids="0"
+  # --end-npu-ids="0" 
   # --logical-topology-configuration="${LOGICAL}"

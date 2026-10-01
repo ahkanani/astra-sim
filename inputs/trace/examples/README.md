@@ -13,10 +13,10 @@ The structure of the workload input adheres to the following format. Please note
   * (LOCAL/REMOTE/STORAGE/INVALID: **location of weight tensor**)
   * (int: **size of weight tensor in bytes**)
   * (LOCAL/REMOTE/STORAGE/INVALID: **location of output tensor**)
-  * (int: **size of output tensor in bytes**)
+  * (int: **size of output tensor in bytes**)  
   * (int: **forward pass compute time**)
   * (ALLREDUCE/ALLGATHER/ALLTOALL: **forward pass communication type**)
   * (int: **forward pass communication size**)
   * (str: **additional information passed to the converter**)
 
-*NOTE: All parameters within the brackets are defined on a single line for each layer of the DNN network.*
+*NOTE: All parameters within the brackets are defined on a single line for each layer of the DNN network.* 
