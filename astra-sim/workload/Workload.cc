@@ -57,6 +57,7 @@ Workload::Workload(Sys* sys, string et_filename, string comm_group_filename) {
 }
 
 Workload::~Workload() {
+    for (auto& entry : comm_groups) delete entry.second;
     if (this->comm_group != nullptr) {
         delete this->comm_group;
     }
@@ -79,6 +80,17 @@ void Workload::initialize_comm_group(string comm_group_filename) {
     json j;
     inFile.open(comm_group_filename);
     inFile >> j;
+
+    if (j.contains("groups")) {
+        for (auto it = j["groups"].begin(); it != j["groups"].end(); ++it) {
+            std::vector<int> members = it.value().get<std::vector<int>>();
+            if (std::find(members.begin(), members.end(), sys->id) != members.end()) {
+                int group_id = std::stoi(it.key());
+                comm_groups[group_id] = new CommunicatorGroup(group_id, members, sys);
+            }
+        }
+        return;
+    }
 
     for (json::iterator it = j.begin(); it != j.end(); ++it) {
         bool in_comm_group = false;
@@ -270,6 +282,13 @@ void Workload::issue_comp(shared_ptr<Chakra::ETFeederNode> node) {
 }
 
 void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
+    CommunicatorGroup* selected_group = comm_group;
+    if (node->has_other_attr("comm_group_id")) {
+        int group_id = node->get_other_attr("comm_group_id").int32_val();
+        auto group = comm_groups.find(group_id);
+        if (group == comm_groups.end()) throw std::runtime_error("Unknown collective group on this GPU");
+        selected_group = group->second;
+    }
     hw_resource->occupy(node);
 
     vector<bool> involved_dim;
@@ -307,7 +326,7 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
         if (node->comm_type() == ChakraCollectiveCommType::ALL_REDUCE) {
             DataSet* fp =
                 sys->generate_all_reduce(node->comm_size(), involved_dim,
-                                         comm_group, node->comm_priority());
+                                         selected_group, node->comm_priority());
             collective_comm_node_id_map[fp->my_id] = node->id();
             collective_comm_wrapper_map[fp->my_id] = fp;
             fp->set_notifier(this, EventType::CollectiveCommunicationFinished);
@@ -315,7 +334,7 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
         } else if (node->comm_type() == ChakraCollectiveCommType::ALL_TO_ALL) {
             DataSet* fp =
                 sys->generate_all_to_all(node->comm_size(), involved_dim,
-                                         comm_group, node->comm_priority());
+                                         selected_group, node->comm_priority());
             collective_comm_node_id_map[fp->my_id] = node->id();
             collective_comm_wrapper_map[fp->my_id] = fp;
             fp->set_notifier(this, EventType::CollectiveCommunicationFinished);
@@ -323,7 +342,7 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
         } else if (node->comm_type() == ChakraCollectiveCommType::ALL_GATHER) {
             DataSet* fp =
                 sys->generate_all_gather(node->comm_size(), involved_dim,
-                                         comm_group, node->comm_priority());
+                                         selected_group, node->comm_priority());
             collective_comm_node_id_map[fp->my_id] = node->id();
             collective_comm_wrapper_map[fp->my_id] = fp;
             fp->set_notifier(this, EventType::CollectiveCommunicationFinished);
@@ -332,7 +351,7 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
                    ChakraCollectiveCommType::REDUCE_SCATTER) {
             DataSet* fp =
                 sys->generate_reduce_scatter(node->comm_size(), involved_dim,
-                                             comm_group, node->comm_priority());
+                                             selected_group, node->comm_priority());
             collective_comm_node_id_map[fp->my_id] = node->id();
             collective_comm_wrapper_map[fp->my_id] = fp;
             fp->set_notifier(this, EventType::CollectiveCommunicationFinished);
