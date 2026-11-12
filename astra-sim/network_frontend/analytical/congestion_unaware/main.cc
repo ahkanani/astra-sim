@@ -99,6 +99,19 @@ int main(int argc, char* argv[]) {
     // Set up Network API
     CongestionUnawareNetworkApi::set_event_queue(event_queue);
     CongestionUnawareNetworkApi::set_topology(topology);
+    json replay_config;
+    {
+        std::ifstream stream(system_configuration);
+        stream >> replay_config;
+    }
+    const bool replay_event_driven = replay_config.value("replay-event-driven", false);
+    if (replay_config.contains("replay-domain-map")) {
+        const auto& outer = replay_config.at("replay-scaleout");
+        CongestionUnawareNetworkApi::set_replay_domains(
+            replay_config.at("replay-domain-map").get<std::vector<int>>(),
+            outer.at("topology").get<std::string>(), outer.at("bandwidth").get<double>(),
+            outer.at("latency").get<double>(), replay_config.value("replay-local-bandwidth", 0.0));
+    }
 
     // Create ASTRA-sim related resources
     auto network_apis =
@@ -294,11 +307,23 @@ int main(int argc, char* argv[]) {
     bool exit = false;
     while (!exit) {
       bool asked_any = false;
-      if(!event_queue->finished()){
+      bool ready_to_poll = false;
+      if (replay_event_driven) {
+        for (auto npu_id : start_npu_ids)
+          if (!systems[npu_id]->workload->is_sleep && systems[npu_id]->workload->is_finished && askable(npu_id))
+            ready_to_poll = true;
+        for (auto npu_id : end_npu_ids)
+          if (!systems[npu_id]->workload->is_sleep && systems[npu_id]->workload->is_finished && askable(npu_id))
+            ready_to_poll = true;
+      }
+      if(ready_to_poll) {
+        // Drain frontend-ready work at this timestamp before advancing time.
+      }
+      else if(!event_queue->finished()){
         event_queue->proceed();
       }
       else {
-        event_queue->add_current_time();
+        if (!replay_event_driven) event_queue->add_current_time();
         // Nothing is in flight, so no report can arrive to lift the
         // suppression; the 1 ms quantum is the only thing that moves.
         clear_suppression();

@@ -17,6 +17,9 @@ LICENSE file in the root directory of this source tree.
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
+#include <map>
+#include <limits>
+#include <stdexcept>
 
 using namespace std;
 using namespace AstraSim;
@@ -26,6 +29,125 @@ using AstraSim::MemoryLocationType;
 
 typedef ChakraProtoMsg::NodeType ChakraNodeType;
 typedef ChakraProtoMsg::CollectiveCommType ChakraCollectiveCommType;
+
+namespace {
+// Variable-size expert exchanges use one collective barrier for GPU and CPU/PIM
+// domains alike. Peer messages travel through the normal network API, including
+// the configured scale-up links and shared full-duplex scale-out NIC queues.
+// Legacy scalar-size collectives continue through the existing ASTRA plans.
+struct ExpertExchangeParticipant {
+    Workload* workload;
+    uint64_t node_id;
+    Tick issued;
+    std::vector<uint64_t> sends, receives;
+};
+
+struct ExpertExchangeState {
+    std::vector<int> members;
+    std::map<int, ExpertExchangeParticipant> participants;
+    size_t remaining = 0;
+    int tag;
+};
+
+using ExpertExchangeKey = std::pair<int, uint64_t>;
+std::map<ExpertExchangeKey, std::shared_ptr<ExpertExchangeState>> expert_exchanges;
+int next_expert_exchange_tag = 0;
+
+void finish_expert_exchange(const std::shared_ptr<ExpertExchangeState>& state) {
+    for (const auto& entry : state->participants) {
+        const auto& participant = entry.second;
+        auto* workload = participant.workload;
+        workload->hw_resource->tics_gpu_comms += Sys::boostedTick() - participant.issued;
+        auto* completion = new WorkloadLayerHandlerData;
+        completion->node_id = participant.node_id;
+        workload->sys->register_event(workload, EventType::General, completion, 0);
+    }
+}
+
+void expert_exchange_received(void* argument) {
+    auto* holder = static_cast<std::shared_ptr<ExpertExchangeState>*>(argument);
+    auto state = *holder;
+    delete holder;
+    if (--state->remaining == 0) finish_expert_exchange(state);
+}
+
+void issue_expert_exchange(Workload* workload,
+                          const std::shared_ptr<Chakra::ETFeederNode>& node,
+                          CommunicatorGroup* group) {
+    if (group == nullptr || node->comm_type() != ChakraCollectiveCommType::ALL_TO_ALL)
+        throw std::runtime_error("Expert exchange requires an ALL_TO_ALL communicator");
+    const auto& send_attr = node->get_other_attr("replay_send_counts");
+    const auto& recv_attr = node->get_other_attr("replay_recv_counts");
+    if (!send_attr.has_uint64_list() || !recv_attr.has_uint64_list())
+        throw std::runtime_error("Expert exchange requires uint64 count vectors");
+    const auto& sends = send_attr.uint64_list().values();
+    const auto& receives = recv_attr.uint64_list().values();
+    if (sends.size() != group->involved_NPUs.size() || receives.size() != sends.size())
+        throw std::runtime_error("Expert exchange counts do not match communicator");
+    const ExpertExchangeKey key(node->get_other_attr("comm_group_id").int32_val(),
+                                node->get_other_attr("replay_collective_id").uint64_val());
+    auto& slot = expert_exchanges[key];
+    if (!slot) {
+        slot = std::make_shared<ExpertExchangeState>();
+        slot->members = group->involved_NPUs;
+        if (next_expert_exchange_tag == 500000000)
+            throw std::runtime_error("Expert exchange message tag space exhausted");
+        slot->tag = next_expert_exchange_tag++;
+    }
+    auto state = slot;
+    if (state->members != group->involved_NPUs || state->participants.count(workload->sys->id))
+        throw std::runtime_error("Inconsistent or duplicate expert collective participant");
+    state->participants.emplace(workload->sys->id, ExpertExchangeParticipant{
+        workload, node->id(), Sys::boostedTick(),
+        std::vector<uint64_t>(sends.begin(), sends.end()),
+        std::vector<uint64_t>(receives.begin(), receives.end())});
+    if (state->participants.size() != state->members.size()) return;
+
+    // Validate the complete matrix before reserving any network work. Self data
+    // is already resident and must not be charged as a network transfer.
+    for (size_t i = 0; i < state->members.size(); ++i) {
+        const auto& source = state->participants.at(state->members[i]);
+        uint64_t total = 0;
+        for (size_t j = 0; j < state->members.size(); ++j) {
+            const auto bytes = source.sends[j];
+            const auto& target = state->participants.at(state->members[j]);
+            if (bytes != target.receives[i] || (i == j && bytes != 0))
+                throw std::runtime_error("Expert exchange send/receive matrix mismatch");
+            if (bytes > std::numeric_limits<uint64_t>::max() - total)
+                throw std::runtime_error("Expert exchange byte count overflow");
+            total += bytes;
+            if (bytes) ++state->remaining;
+        }
+        if (total != source.workload->et_feeder->lookupNode(source.node_id)->comm_size())
+            throw std::runtime_error("Expert exchange comm_size disagrees with count vector");
+    }
+    expert_exchanges.erase(key);
+    if (state->remaining == 0) {
+        finish_expert_exchange(state);
+        return;
+    }
+    // Direct all-to-all-v: packed, nonempty peer exchanges only. This is not a
+    // dense padded ring; GPU and PIM peers use exactly the same implementation.
+    for (size_t i = 0; i < state->members.size(); ++i) {
+        const auto& source = state->participants.at(state->members[i]);
+        for (size_t j = 0; j < state->members.size(); ++j) {
+            const auto bytes = source.sends[j];
+            if (!bytes) continue;
+            const auto& target = state->participants.at(state->members[j]);
+            sim_request request{};
+            request.srcRank = state->members[i];
+            request.dstRank = state->members[j];
+            request.reqType = UINT8;
+            target.workload->sys->front_end_sim_recv(0, Sys::dummy_data, bytes, UINT8,
+                state->members[i], state->tag, &request, Sys::FrontEndSendRecvType::NATIVE,
+                expert_exchange_received, new std::shared_ptr<ExpertExchangeState>(state));
+            source.workload->sys->front_end_sim_send(0, Sys::dummy_data, bytes, UINT8,
+                state->members[j], state->tag, &request, Sys::FrontEndSendRecvType::NATIVE,
+                [](void*) {}, nullptr);
+        }
+    }
+}
+}  // namespace
 
 Workload::Workload(Sys* sys, string et_filename, string comm_group_filename) {
     string workload_filename = et_filename + "." + to_string(sys->id) + ".et";
@@ -290,6 +412,12 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
         selected_group = group->second;
     }
     hw_resource->occupy(node);
+
+    if (node->has_other_attr("replay_alltoallv") &&
+        node->get_other_attr("replay_alltoallv").bool_val()) {
+        issue_expert_exchange(this, node, selected_group);
+        return;
+    }
 
     vector<bool> involved_dim;
 
